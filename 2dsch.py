@@ -13,16 +13,16 @@ import scipy.signal
 dt = 1e-2   # Temporal seperation
 
 # Spatial grid points
-nx = 21
-ny = 21
+nx = 31
+ny = 31
 
-Lx = 5    # Spatial size, symmetric with respect to x=0
-Ly = 5   # Spatial size, symmetric with respect to x=0
+Lx = 10    # Spatial size, symmetric with respect to x=0
+Ly = 10   # Spatial size, symmetric with respect to x=0
 
 alpha=9
 
-kx = 1 #wavenumber
-ky = 1 #wavenumber
+kx = 1
+ky = alpha * kx
 
 # Derived Simulation Parameters
 
@@ -164,14 +164,19 @@ def Evolve(some_psi):
 
 
 # This function calculates the overlap between two 2D wavefunctions
-def Overlap(psi1, psi2):
+def Overlap2D(psi1, psi2):
     overlap = 0
     for i in range(x.size):
         for j in range(y.size):
             overlap += psi1[i][j] * np.conj(psi2[i][j]) * dx * dy
     return overlap
 
-
+# This function calculates the overlap between two 2D wavefunctions
+def Overlap1D(psi1, psi2):
+    overlap = 0
+    for i in range(x.size):
+        overlap += psi1[i]*np.conj(psi2[i])*dx
+    return overlap
 
 
 
@@ -199,35 +204,45 @@ def CoherentStateExact2D(t):
     return result
 
 
+
+
+
+'''
+# x = 0 cross section
+
 currentTime = 0
-psi1 = Normalize2D(CoherentStateExact2D(currentTime))
-psi2 = CoherentStateExact2D(currentTime)
+mid = ( ((nx+1)/2)+1 )
+psi1 = Normalize2D(CoherentStateExact2D(currentTime))[:,11]
+psi2 = Normalize2D(ExcitedStateNumerical2D(0))[:,11]
+psi3 = Normalize2D(GroundStateExact2D())[:,11]
 
-ov = np.abs(Overlap(psi1, psi2))
 
-print('Timestep: ' + str(currentTime))
+#print('Overlap between Exact coherent state(t=0) & Numerical ground state: ' + str(np.abs(Overlap1D(psi1,psi2))))
+#print('Overlap between Exact coherent state(t=0) & Exact ground state: ' + str(np.abs(Overlap1D(psi1,psi3))))
+#print('Numerical ground state: & Exact ground state: ' + str(np.abs(Overlap1D(psi2,psi3))))
 
-plt.suptitle('Overlap: {0:.5f}'.format(ov))
+plt.suptitle('x=0 cross section')
 
-plt.subplot(1, 2, 1)
-plt.contourf(x,y, np.abs(psi1)**2,256, cmap='RdYlBu')
+
+plt.plot(y, np.abs(psi1)**2, 'r-' , linewidth=6, label ='Exact coherent state at t=0')
+plt.plot(y, np.abs(psi2)**2, 'b--' ,linewidth=4, label ='Numerical ground state')
+plt.plot(y, np.abs(psi3)**2, 'y--' ,linewidth=2, label ='Exact ground state')
 plt.grid()
-plt.title('Normalized Exact Solution (Time:{0:.3f}s)'.format(currentTime))
-plt.colorbar()
-plt.xlabel('x')
-plt.ylabel('y')
-plt.tight_layout()
+plt.title('nx = ' + str(nx))
 
-plt.subplot(1, 2, 2)
-plt.contourf(x,y, np.abs(psi2)**2,256, cmap='RdYlBu')
-plt.grid()
-plt.title('Exact Solution (Time:{0:.3f}s)'.format(currentTime))
-plt.colorbar()
-plt.xlabel('x')
-plt.ylabel('y')
+plt.xlabel('y')
+plt.ylabel('Amplitude square')
 plt.tight_layout()
+plt.legend()
 
 plt.show()
+'''
+
+
+
+
+
+
 
 
 
@@ -237,7 +252,48 @@ plt.show()
 
 
 '''
-frames = 5
+currentTime = 0
+psi1 = Normalize2D(CoherentStateExact2D(currentTime))
+psi2 = Normalize2D(ExcitedStateNumerical2D(0))
+
+ov = np.abs(Overlap(psi1, psi2))
+
+print('Timestep: ' + str(currentTime))
+
+plt.suptitle('Overlap: {0:.7f}'.format(ov))
+
+plt.subplot(1, 2, 1)
+plt.contourf(x,y, np.abs(psi1)**2,256, cmap='RdYlBu')
+plt.grid()
+plt.title('Exact Ground State (Time:{0:.3f}s)'.format(currentTime))
+plt.colorbar()
+plt.xlabel('x')
+plt.ylabel('y')
+plt.tight_layout()
+
+plt.subplot(1, 2, 2)
+plt.contourf(x,y, np.abs(psi2)**2,256, cmap='RdYlBu')
+plt.grid()
+plt.title('Numerical Ground State (Time:{0:.3f}s)'.format(currentTime))
+plt.colorbar()
+plt.xlabel('x')
+plt.ylabel('y')
+plt.tight_layout()
+
+plt.show()
+'''
+
+
+
+
+
+
+
+
+
+
+
+frames = 1200
 
 num_psi = Normalize2D(CoherentStateNumerical2D())
 
@@ -246,7 +302,9 @@ for i in range(frames):
     psi = CoherentStateExact2D(currentTime)
     print('Timestep: ' + str(currentTime))
 
-    plt.suptitle('zaa')
+    ov = np.abs(Overlap2D(psi, num_psi))
+
+    plt.suptitle('Coherent State Exact vs. Numerical\nOverlap: {0:.7f}'.format(ov))
 
     plt.subplot(1, 2, 1)
     plt.contourf(x,y, np.abs(psi)**2,256, cmap='RdYlBu')
@@ -268,8 +326,5 @@ for i in range(frames):
 
     num_psi = Evolve(num_psi)
 
-
-
-    plt.savefig('new' + str(i) +'.png')
+    plt.savefig('num_vs_exact' + str(i) +'.png')
     plt.clf()
-'''
