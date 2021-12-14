@@ -16,13 +16,13 @@ dt = 1e-2   # Temporal seperation
 nx = 31
 ny = 31
 
-Lx = 10    # Spatial size, symmetric with respect to x=0
-Ly = 10   # Spatial size, symmetric with respect to x=0
+Lx = 15    # Spatial size, symmetric with respect to x=0
+Ly = 15   # Spatial size, symmetric with respect to x=0
 
-alpha=9
+alpha=1
 
 kx = 1
-ky = alpha * kx
+ky = 1
 
 # Derived Simulation Parameters
 
@@ -118,7 +118,7 @@ def GroundStateExact2D():
         for j in range(nx):
             currentx = x[j]
             currenty = y[i]
-            psi = (alpha**(0.25))*(np.exp(-0.5*(currentx**2)))*((np.exp(-0.5*(alpha**0.5)*(currenty**2))))
+            psi = (alpha**(0.125))*(np.exp(-0.5*(currentx**2)))*((np.exp(-0.5*(alpha**0.5)*(currenty**2))))
             result[i][j] = psi
 
     return result
@@ -182,7 +182,8 @@ def Overlap1D(psi1, psi2):
 
 
 def CoherentStateNumerical2D():
-    return ExcitedStateNumerical2D(0) * np.exp(1j*kx*x) * np.exp(1j*ky*y)
+    startingPoint = CoherentStateExact2D(0)
+    return startingPoint
 
 
 # Implementation of coherent state specified in the
@@ -191,13 +192,14 @@ def CoherentStateNumerical2D():
 #
 # with x_0=0
 def CoherentStateExact2D(t):
+    xinitial = 2
     result = np.zeros((ny, nx), dtype=complex)
     for i in range(ny):
         for j in range(nx):
             currentx = x[j]
             currenty = y[i]
-            A = (alpha**0.25)/(np.pi**0.5)
-            X = np.exp(  -0.5 * (currentx - 0*np.cos(t))**2    ) * np.exp(  -1j * 0 * currentx * np.sin(t))
+            A = (alpha**0.125)/(np.pi**0.5)
+            X = np.exp(  -0.5 * (currentx - xinitial * np.cos(t))**2    ) * np.exp(  -1j * xinitial * currentx * np.sin(t))
             Y = np.exp(  -(0.5 * (alpha**0.5)) * (currenty - ky*np.sin(t*(alpha**0.5)))**2    ) * np.exp(  1j * ky * currenty * np.cos(t**(alpha**0.5)))
             result[i][j] = A*X*Y
 
@@ -212,14 +214,19 @@ def CoherentStateExact2D(t):
 
 currentTime = 0
 mid = ( ((nx+1)/2)+1 )
+
+psi1_whole = Normalize2D(CoherentStateExact2D(currentTime))
+psi2_whole = Normalize2D(ExcitedStateNumerical2D(0))
+psi3_whole= Normalize2D(GroundStateExact2D())
+
 psi1 = Normalize2D(CoherentStateExact2D(currentTime))[:,11]
 psi2 = Normalize2D(ExcitedStateNumerical2D(0))[:,11]
 psi3 = Normalize2D(GroundStateExact2D())[:,11]
 
 
-#print('Overlap between Exact coherent state(t=0) & Numerical ground state: ' + str(np.abs(Overlap1D(psi1,psi2))))
-#print('Overlap between Exact coherent state(t=0) & Exact ground state: ' + str(np.abs(Overlap1D(psi1,psi3))))
-#print('Numerical ground state: & Exact ground state: ' + str(np.abs(Overlap1D(psi2,psi3))))
+print('Overlap between Exact coherent state(t=0) & Numerical ground state: ' + str(np.abs(Overlap2D(psi1_whole,psi2_whole))))
+print('Overlap between Exact coherent state(t=0) & Exact ground state: ' + str(np.abs(Overlap2D(psi1_whole,psi3_whole))))
+print('Numerical ground state: & Exact ground state: ' + str(np.abs(Overlap2D(psi2_whole,psi3_whole))))
 
 plt.suptitle('x=0 cross section')
 
@@ -236,8 +243,8 @@ plt.tight_layout()
 plt.legend()
 
 plt.show()
-'''
 
+'''
 
 
 
@@ -253,10 +260,10 @@ plt.show()
 
 '''
 currentTime = 0
-psi1 = Normalize2D(CoherentStateExact2D(currentTime))
-psi2 = Normalize2D(ExcitedStateNumerical2D(0))
+psi1 = Normalize2D(GroundStateExact2D())
+psi2 = Normalize2D(CoherentStateExact2D(0))
 
-ov = np.abs(Overlap(psi1, psi2))
+ov = np.abs(Overlap2D(psi1, psi2))
 
 print('Timestep: ' + str(currentTime))
 
@@ -281,6 +288,7 @@ plt.ylabel('y')
 plt.tight_layout()
 
 plt.show()
+
 '''
 
 
@@ -292,10 +300,9 @@ plt.show()
 
 
 
+frames = 60
 
-frames = 1200
-
-num_psi = Normalize2D(CoherentStateNumerical2D())
+num_psi = Normalize2D( CoherentStateNumerical2D() )
 
 for i in range(frames):
     currentTime = i*dt
@@ -326,5 +333,5 @@ for i in range(frames):
 
     num_psi = Evolve(num_psi)
 
-    plt.savefig('num_vs_exact' + str(i) +'.png')
+    plt.savefig('last' + str(i) +'.png')
     plt.clf()
