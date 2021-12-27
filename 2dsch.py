@@ -6,18 +6,22 @@ import scipy.linalg as la
 import math
 import datetime
 import scipy.signal
+import time
+
+start = time.time()
 
 
-# Simulation Parameters
 
-dt = 1e-2   # Temporal seperation
+# Simulation Parameters`
+
+dt = 0.01  # Temporal seperation
 
 # Spatial grid points
-nx = 31
-ny = 31
+nx = 21
+ny = 21
 
-Lx = 15    # Spatial size, symmetric with respect to x=0
-Ly = 15   # Spatial size, symmetric with respect to x=0
+Lx = 12  # Spatial size, symmetric with respect to x=0
+Ly = 12  # Spatial size, symmetric with respect to x=0
 
 alpha=1
 
@@ -85,7 +89,7 @@ def SquareSum2D(some_psi):
     sum = 0
     for i in range(len(some_psi)):
         for j in range(len(some_psi[i])):
-            sum += some_psi[i][j] * np.conj(some_psi[i][j]) * dx * dy
+            sum += np.abs(some_psi[i][j])**2 * dx * dy
 
     return sum
 
@@ -121,7 +125,7 @@ def GroundStateExact2D():
             psi = (alpha**(0.125))*(np.exp(-0.5*(currentx**2)))*((np.exp(-0.5*(alpha**0.5)*(currenty**2))))
             result[i][j] = psi
 
-    return result
+    return Normalize2D(result)
 
 
 # Name says it all
@@ -150,8 +154,6 @@ LHS = LHS()
 RHS = RHS()
 InverseOfLHS = np.linalg.inv(LHS)
 
-
-
 # U is the time evolution matrix. To keep things time efficient,
 # I initialize this matrix once and use it as necessary.
 U = np.matmul(InverseOfLHS, RHS)
@@ -169,14 +171,14 @@ def Overlap2D(psi1, psi2):
     for i in range(x.size):
         for j in range(y.size):
             overlap += psi1[i][j] * np.conj(psi2[i][j]) * dx * dy
-    return overlap
+    return np.abs(overlap)
 
-# This function calculates the overlap between two 2D wavefunctions
+# This function calculates the overlap between two 1D wavefunctions
 def Overlap1D(psi1, psi2):
     overlap = 0
     for i in range(x.size):
-        overlap += psi1[i]*np.conj(psi2[i])*dx
-    return overlap
+        overlap += psi1[i] * np.conj(psi2[i]) * dx
+    return np.abs(overlap)
 
 
 
@@ -190,148 +192,96 @@ def CoherentStateNumerical2D():
 #
 # https://files.slack.com/files-pri/T5MM8M0CR-F02LPDYN02X/download/2021-11-09-2d_coherent_state.pdf
 #
-# with x_0=0
+# with x_0=2
 def CoherentStateExact2D(t):
-    xinitial = 2
+    xinitial = 3
     result = np.zeros((ny, nx), dtype=complex)
     for i in range(ny):
         for j in range(nx):
             currentx = x[j]
             currenty = y[i]
-            A = (alpha**0.125)/(np.pi**0.5)
+            #A = (alpha**0.125)/(np.pi**0.5)
             X = np.exp(  -0.5 * (currentx - xinitial * np.cos(t))**2    ) * np.exp(  -1j * xinitial * currentx * np.sin(t))
             Y = np.exp(  -(0.5 * (alpha**0.5)) * (currenty - ky*np.sin(t*(alpha**0.5)))**2    ) * np.exp(  1j * ky * currenty * np.cos(t**(alpha**0.5)))
-            result[i][j] = A*X*Y
+            result[i][j] = X*Y
 
-    return result
-
-
-
-
-
-'''
-# x = 0 cross section
-
-currentTime = 0
-mid = ( ((nx+1)/2)+1 )
-
-psi1_whole = Normalize2D(CoherentStateExact2D(currentTime))
-psi2_whole = Normalize2D(ExcitedStateNumerical2D(0))
-psi3_whole= Normalize2D(GroundStateExact2D())
-
-psi1 = Normalize2D(CoherentStateExact2D(currentTime))[:,11]
-psi2 = Normalize2D(ExcitedStateNumerical2D(0))[:,11]
-psi3 = Normalize2D(GroundStateExact2D())[:,11]
-
-
-print('Overlap between Exact coherent state(t=0) & Numerical ground state: ' + str(np.abs(Overlap2D(psi1_whole,psi2_whole))))
-print('Overlap between Exact coherent state(t=0) & Exact ground state: ' + str(np.abs(Overlap2D(psi1_whole,psi3_whole))))
-print('Numerical ground state: & Exact ground state: ' + str(np.abs(Overlap2D(psi2_whole,psi3_whole))))
-
-plt.suptitle('x=0 cross section')
-
-
-plt.plot(y, np.abs(psi1)**2, 'r-' , linewidth=6, label ='Exact coherent state at t=0')
-plt.plot(y, np.abs(psi2)**2, 'b--' ,linewidth=4, label ='Numerical ground state')
-plt.plot(y, np.abs(psi3)**2, 'y--' ,linewidth=2, label ='Exact ground state')
-plt.grid()
-plt.title('nx = ' + str(nx))
-
-plt.xlabel('y')
-plt.ylabel('Amplitude square')
-plt.tight_layout()
-plt.legend()
-
-plt.show()
-
-'''
+    return Normalize2D(result)
 
 
 
 
 
+number_of_oscillations = 5
 
+terminateAt = number_of_oscillations * 2 * np.pi
+timesteps = math.ceil(terminateAt / dt)
 
+currentDate  = datetime.datetime.now()
 
+lx_over_kx = Lx/kx
+ly_over_ky = Ly/ky
 
+filename = 'default.dat'
 
+with open(filename, 'a') as f:
+    f.write('# Simulation started at ' + str(currentDate) + '\n')
+    f.write('#\n')
+    f.write('# Simulation details: \n')
+    f.write('# Lx = ' + str(Lx) + ' \n')
+    f.write('# kx = ' + str(kx) + ' \n')
+    f.write('# Lx / kx = ' + str(lx_over_kx) + ' \n')
 
+    f.write('# Ly = ' + str(Ly) + ' \n')
+    f.write('# ky = ' + str(ky) + ' \n')
+    f.write('# Ly / ky = ' + str(ly_over_ky) + ' \n')
+    f.write('# dt = ' + str(dt) + ' s \n')
+    f.write('# dx = ' + str(dx) + ' \n')
+    f.write('# dy = ' + str(dy) + ' \n')
+    f.write('# Spatial grid points : ' + str(nx) + ' x ' + str(ny) + ' \n')
+    f.write('#\n')
+    f.write('# time\terror\n')
 
+psi_num = CoherentStateNumerical2D()
 
-'''
-currentTime = 0
-psi1 = Normalize2D(GroundStateExact2D())
-psi2 = Normalize2D(CoherentStateExact2D(0))
-
-ov = np.abs(Overlap2D(psi1, psi2))
-
-print('Timestep: ' + str(currentTime))
-
-plt.suptitle('Overlap: {0:.7f}'.format(ov))
-
-plt.subplot(1, 2, 1)
-plt.contourf(x,y, np.abs(psi1)**2,256, cmap='RdYlBu')
-plt.grid()
-plt.title('Exact Ground State (Time:{0:.3f}s)'.format(currentTime))
-plt.colorbar()
-plt.xlabel('x')
-plt.ylabel('y')
-plt.tight_layout()
-
-plt.subplot(1, 2, 2)
-plt.contourf(x,y, np.abs(psi2)**2,256, cmap='RdYlBu')
-plt.grid()
-plt.title('Numerical Ground State (Time:{0:.3f}s)'.format(currentTime))
-plt.colorbar()
-plt.xlabel('x')
-plt.ylabel('y')
-plt.tight_layout()
-
-plt.show()
-
-'''
-
-
-
-
-
-
-
-
-
-
-frames = 60
-
-num_psi = Normalize2D( CoherentStateNumerical2D() )
-
-for i in range(frames):
+for i in range(timesteps):
     currentTime = i*dt
-    psi = CoherentStateExact2D(currentTime)
-    print('Timestep: ' + str(currentTime))
 
-    ov = np.abs(Overlap2D(psi, num_psi))
+    psi_exact = CoherentStateExact2D(currentTime)
+    error = np.abs(1 - Overlap2D(psi_num, psi_exact))
 
-    plt.suptitle('Coherent State Exact vs. Numerical\nOverlap: {0:.7f}'.format(ov))
+    current_time_as_string = "{:.3f}".format(currentTime)
+    print('Current time: ' + current_time_as_string)
+    error_as_string = "{:.4e}".format(error)
+
+    with open(filename, 'a') as f:
+        f.write(current_time_as_string+'\t'+error_as_string+'\n')
+
+
+    '''
+    plt.suptitle('Time: ' + current_time_as_string + '\nError: ' + error_as_string)
 
     plt.subplot(1, 2, 1)
-    plt.contourf(x,y, np.abs(psi)**2,256, cmap='RdYlBu')
+    plt.contourf(x, y, np.abs(psi_num)**2, 256, cmap='RdGy')
+    plt.title('Numerical solution')
+    plt.xlim([-6, 6])
+    plt.ylim([-6, 6])
     plt.grid()
-    plt.title('Exact solution (Time:{0:.3f}s)'.format(currentTime))
-    plt.colorbar()
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.tight_layout()
 
     plt.subplot(1, 2, 2)
-    plt.contourf(x,y, np.abs(num_psi)**2,256, cmap='RdYlBu')
+    plt.contourf(x, y, np.abs(psi_exact)**2, 256, cmap='RdGy')
+    plt.title('Exact solution')
+    plt.xlim([-6, 6])
+    plt.ylim([-6, 6])
     plt.grid()
-    plt.title('Numerical solution (Time:{0:.3f}s)'.format(currentTime))
-    plt.colorbar()
-    plt.xlabel('x')
-    plt.ylabel('y')
+
     plt.tight_layout()
-
-    num_psi = Evolve(num_psi)
-
-    plt.savefig('last' + str(i) +'.png')
+    plt.savefig('frame'+str(i)+'.png')
     plt.clf()
+    '''
+
+    psi_num = Evolve(psi_num)
+
+
+end = time.time()
+difference = int(end - start)
+print( str(difference) + 's')
